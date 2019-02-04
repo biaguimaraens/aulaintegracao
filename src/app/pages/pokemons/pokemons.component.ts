@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 
+import { PokemonService } from '../../service/pokemon.service';
+
 @Component({
   selector: 'app-pokemons',
   templateUrl: './pokemons.component.html',
@@ -29,8 +31,9 @@ export class PokemonsComponent implements OnInit {
   // Maior ID de Pokemón que queremos
   rangeMaxValue: number = 20;
 
+  error:boolean = false;
 
-  constructor() {}
+  constructor(public pkmnService: PokemonService) {}
 
 
   ngOnInit() {
@@ -58,14 +61,27 @@ export class PokemonsComponent implements OnInit {
     // Sabendo o valor do input e o tipo de pesquisa, só precisamos mandar uma requisição pra API.
 
     // Se o tipo da pesquisa for por nome ou ID:
+    this.error = false;
+    this.pokemons = [];
+    this.pokemonCardHasUpdated = [];
 
     if ( this.tipoPesquisa == "nome ou pelo ID" ) {
 
       console.log( this.nomeInput );
+        this.pkmnService.getPokemon( this.nomeInput ).subscribe(
 
-      // --------------------------------------------------------------------------------//
-      //                      FAZER REQUISIÇÃO DE NOME/ID PRA API                        //
-      // --------------------------------------------------------------------------------//
+          res => {
+            console.log( res );
+            this.pokemons.push( res );
+            this.pokemonCardHasUpdated.push( true );
+          },
+
+          error => {
+
+            this.error= true;
+
+          }
+        );
 
     }
     // Se não for, então nosso tipo de pesquisa é por range
@@ -73,10 +89,21 @@ export class PokemonsComponent implements OnInit {
 
       console.log( this.rangeMinValue, this.rangeMaxValue );
 
-      // --------------------------------------------------------------------------------//
-      //                       FAZER REQUISIÇÃO DE RANGE PRA API                         //
-      // --------------------------------------------------------------------------------//
+      this.pkmnService.getPokemonsInRange( this.rangeMinValue, this.rangeMaxValue ).subscribe(
 
+        res => {
+
+          console.log( res )
+
+          for ( let result of res.results ) {
+            this.pokemons.push( result );
+          }
+          setTimeout( () => {
+            this.updateCards();
+          },1000);
+        }
+
+      );
     }
 
   }
@@ -87,7 +114,7 @@ export class PokemonsComponent implements OnInit {
 
     if ( value == "nomeOuID" )
       this.placeholderValue = (Math.random() >= 0.5) ? "Ex: Bulbasaur" : "Ex: 1";
-    else 
+    else
       this.nomeInput = "";
 
   }
@@ -111,8 +138,8 @@ export class PokemonsComponent implements OnInit {
     // Vemos o tamanho da nossa viewport
     var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 
-    // Fazemos um laço que será repetido 
-    for (let i=0; i<this.pokemons[0].results.length; i++) {
+    // Fazemos um laço que será repetido
+    for (let i=0; i<this.pokemons.length; i++) {
 
       // Pega o elemento da página que possui o ID "card-i" (um dos nossos cards)
       var el = document.getElementById( "card-"+i );
@@ -127,13 +154,17 @@ export class PokemonsComponent implements OnInit {
         // Se esse card não foi atualizado ainda e se ele está na tela
         if ( !this.pokemonCardHasUpdated[i] && y <= h ) {
 
-          // Fazemos a requisição na API
+          this.pkmnService.getPokemon( this.pokemons[i].name ).subscribe(
 
-          // --------------------------------------------------------------------------------//
-          //                      FAZER REQUISIÇÃO DE NOME/ID PRA API                        //
-          // --------------------------------------------------------------------------------//
+            res => {
 
-          // E falamos que este card foi atualizado
+              this.pokemons[i] = res;
+              this.pokemonCardHasUpdated[i] = true;
+
+            }
+
+          );
+
           console.log("Card "+ i + " atualizado!");
           this.pokemonCardHasUpdated[i] = true;
 
@@ -142,7 +173,7 @@ export class PokemonsComponent implements OnInit {
       }
 
     }
-    
+
   }
 
 
